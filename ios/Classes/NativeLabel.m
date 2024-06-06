@@ -23,15 +23,20 @@
     if (_copyable) {
         self.userInteractionEnabled = YES;
         UILongPressGestureRecognizer *recognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self
-                                                                                                action:@selector(showMenu:)];
+                                                                                                 action:@selector(showMenu:)];
         [self addGestureRecognizer:recognizer];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(willHideMenu:) name:UIMenuControllerWillHideMenuNotification object:nil];
     }
     return self;
 }
 
-- (void)copy:(id)sender
-{
+- (void)dealloc {
+    if (_copyable) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self];
+    }
+}
+
+- (void)copy:(id)sender {
     [UIPasteboard generalPasteboard].string = self.text;
 }
 
@@ -40,47 +45,42 @@
         return;
 
     CGRect frame = self.frame;
-    
+
     frame.origin.x -= 3;
     frame.origin.y -= 1;
     frame.size.width += 6;
     frame.size.height += 6;
-    
-    self.overlayView = [[UIView alloc] initWithFrame: frame];
-    
+
+    self.overlayView = [[UIView alloc] initWithFrame:frame];
+
     [self.overlayView.layer setCornerRadius:3];
     [self.overlayView setBackgroundColor:[UIColor grayColor]];
     [self.overlayView setAlpha:0];
-    [self.superview addSubview: self.overlayView];
-    
+    [self.superview addSubview:self.overlayView];
+
     [UIView animateWithDuration:0.4 animations:^{
         [self.overlayView setAlpha:0.2];
     }];
-    
+
     [self becomeFirstResponder];
-    
+
     UIMenuController *menu = [UIMenuController sharedMenuController];
     [menu setTargetRect:self.frame inView:self.superview];
     [menu setMenuVisible:YES animated:YES];
 }
 
-- (void)willHideMenu:(NSNotification *)inNotification
-{
-    if (self.overlayView == nil)
-    {
+- (void)willHideMenu:(NSNotification *)inNotification {
+    if (self.overlayView == nil) {
         return;
     }
-    
-    [UIView animateWithDuration:0.4 animations:^
-     {
-         [self.overlayView setAlpha:0.0];
-     } completion:^(BOOL finished)
-     {
-         [self.overlayView removeFromSuperview];
-         self.overlayView = nil;
-     }];
-}
 
+    [UIView animateWithDuration:0.4 animations:^{
+        [self.overlayView setAlpha:0.0];
+    } completion:^(BOOL finished) {
+        [self.overlayView removeFromSuperview];
+        self.overlayView = nil;
+    }];
+}
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
     if (_copyable && action == @selector(copy:)) {
@@ -94,43 +94,41 @@
     [super drawTextInRect:UIEdgeInsetsInsetRect(rect, insets)];
 }
 
-- (CGSize) intrinsicContentSize {
+- (CGSize)intrinsicContentSize {
     CGSize intrinsicSuperViewContentSize = [super intrinsicContentSize];
     intrinsicSuperViewContentSize.width += leftInset + rightInset;
     intrinsicSuperViewContentSize.height += topInset + bottomInset;
     return intrinsicSuperViewContentSize;
 }
 
-- (void) setContentEdgeInsets:(UIEdgeInsets)edgeInsets {
+- (void)setContentEdgeInsets:(UIEdgeInsets)edgeInsets {
     topInset = edgeInsets.top;
     leftInset = edgeInsets.left;
     rightInset = edgeInsets.right;
     bottomInset = edgeInsets.bottom;
     [self invalidateIntrinsicContentSize];
 }
+
 @end
 
 @implementation NativeLabel {
-    UILabelWithCopyAndInsets* _label;
-    
+    UILabelWithCopyAndInsets *_label;
     int64_t _viewId;
-    FlutterMethodChannel* _channel;
+    FlutterMethodChannel *_channel;
     id _Nullable _args;
-
     float _containerWidth;
     UIEdgeInsets _edgeInsets;
 }
 
-
 - (instancetype)initWithFrame:(CGRect)frame
                viewIdentifier:(int64_t)viewId
                     arguments:(id _Nullable)args
-              binaryMessenger:(NSObject<FlutterBinaryMessenger>*)messenger {
-    
+              binaryMessenger:(NSObject<FlutterBinaryMessenger> *)messenger {
+
     if ([super init]) {
-        NSString* channelName = [NSString stringWithFormat:@"flutter_native_label%lld", viewId];
+        NSString *channelName = [NSString stringWithFormat:@"flutter_native_label%lld", viewId];
         _channel = [FlutterMethodChannel methodChannelWithName:channelName binaryMessenger:messenger];
-        
+
         _viewId = viewId;
         _args = args;
 
@@ -160,14 +158,14 @@
             _label.font = [UIFont systemFontOfSize:scaledFontSize weight:fontWeight];
         }
         if (args[@"fontColor"] && ![args[@"fontColor"] isKindOfClass:[NSNull class]]) {
-            NSDictionary* fontColor = args[@"fontColor"];
+            NSDictionary *fontColor = args[@"fontColor"];
             UIColor *textColor = [UIColor colorWithRed:[fontColor[@"red"] floatValue]/255.0 green:[fontColor[@"green"] floatValue]/255.0 blue:[fontColor[@"blue"] floatValue]/255.0 alpha:[fontColor[@"alpha"] floatValue]/255.0];
             _label.textColor = textColor;
         }
 
         NSString *text = args[@"text"];
         NSMutableAttributedString *attributedText =
-            [[NSMutableAttributedString alloc] initWithString:text];
+                [[NSMutableAttributedString alloc] initWithString:text];
 
         if (args[@"lineSpacing"] && ![args[@"lineSpacing"] isKindOfClass:[NSNull class]]) {
             NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
@@ -179,8 +177,8 @@
 
         if (args[@"kern"] && ![args[@"kern"] isKindOfClass:[NSNull class]]) {
             [attributedText addAttribute:NSKernAttributeName
-                        value:args[@"kern"]
-                        range:NSMakeRange(0, [text length])];
+                                   value:args[@"kern"]
+                                   range:NSMakeRange(0, [text length])];
         }
 
         float edgeInsetTop = 0.0;
@@ -207,30 +205,30 @@
         _containerWidth = [args[@"width"] floatValue];
 
         __weak __typeof__(self) weakSelf = self;
-        [_channel setMethodCallHandler:^(FlutterMethodCall* call, FlutterResult result) {
+        [_channel setMethodCallHandler:^(FlutterMethodCall *call, FlutterResult result) {
             [weakSelf onMethodCall:call result:result];
         }];
     }
     return self;
 }
 
-- (void)onMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+- (void)onMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
     if ([[call method] isEqualToString:@"getContentDimensions"]) {
         CGSize size = [_label intrinsicContentSize];
         if (size.width > _containerWidth) {
-            CGSize boundSize = CGSizeMake(_containerWidth -  _edgeInsets.left - _edgeInsets.right, MAXFLOAT);
-            size = [_label sizeThatFits: boundSize];
+            CGSize boundSize = CGSizeMake(_containerWidth - _edgeInsets.left - _edgeInsets.right, MAXFLOAT);
+            size = [_label sizeThatFits:boundSize];
             float width = size.width + _edgeInsets.left + _edgeInsets.right;
             float height = size.height + _edgeInsets.top + _edgeInsets.bottom;
             size = CGSizeMake(width, height);
         }
-        result(@[[NSNumber numberWithFloat: size.width], [NSNumber numberWithFloat:size.height]]);
+        result(@[[NSNumber numberWithFloat:size.width], [NSNumber numberWithFloat:size.height]]);
     } else {
         result(FlutterMethodNotImplemented);
     }
 }
 
-- (UIView*)view {
+- (UIView *)view {
     return _label;
 }
 
